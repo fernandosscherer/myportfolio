@@ -12,14 +12,21 @@ import {
   FolderPlus,
 } from "lucide-react";
 import ProjectCard from "@/components/ProjectCard";
-import { getFeaturedProjects } from "@/lib/projects";
+import { useContent } from "@/lib/content-store";
 import { GithubIcon, LinkedinIcon } from "@/components/Icons";
 import { siteConfig } from "@/lib/config";
 
 const indicatorIcons = [Briefcase, FolderGit2, Sparkles] as const;
 
 export default function Home() {
-  const featuredProjects = getFeaturedProjects().slice(0, 4);
+  const { projects, pages } = useContent();
+  const homeCopy = pages["/"] ?? {};
+  const headline = homeCopy.headline ?? siteConfig.headline;
+  const ctaTitle = homeCopy.title ?? "Let's build something together";
+  const ctaText =
+    homeCopy.description ??
+    "I help startups and companies build high-quality websites, SaaS products, AI integrations and automation systems.";
+  const featuredProjects = projects.filter((p) => p.featured).slice(0, 4);
   const roleParts = siteConfig.role.split("•").map((p) => p.trim());
 
   return (
@@ -57,7 +64,7 @@ export default function Home() {
           </p>
 
           <p className="mt-3 max-w-2xl text-sm md:text-base text-muted">
-            {siteConfig.headline}
+            {headline}
           </p>
 
           <div className="mt-6 flex items-center gap-4 text-xs md:text-sm text-muted">
@@ -165,10 +172,10 @@ export default function Home() {
             <FolderPlus className="h-8 w-8 text-muted" />
             <p className="font-medium text-foreground">No featured projects yet</p>
             <p className="text-sm text-muted">
-              Add your projects in{" "}
-              <code className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-xs">
-                src/lib/projects.ts
-              </code>
+              Add and feature projects in the{" "}
+              <Link href="/admin" className="text-primary hover:underline">
+                Content Dashboard
+              </Link>
             </p>
           </div>
         )}
@@ -178,11 +185,10 @@ export default function Home() {
       <section className="py-16 md:pb-24">
         <div className="rounded-2xl border border-border bg-surface p-8 md:p-12 text-center">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Let&apos;s build something together
+            {ctaTitle}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm md:text-base text-muted">
-            I help startups and companies build high-quality websites, SaaS
-            products, AI integrations and automation systems.
+            {ctaText}
           </p>
           <Link
             href="/contact"

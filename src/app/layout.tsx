@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CommandPalette from "@/components/CommandPalette";
+import { ContentProvider } from "@/lib/content-store";
 import { siteConfig } from "@/lib/config";
 import "./globals.css";
 
@@ -90,10 +91,12 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem={false}
         >
-          <Header />
-          <CommandPalette />
-          <main className="flex-1 pt-14">{children}</main>
-          <Footer />
+          <ContentProvider>
+            <Header />
+            <CommandPalette />
+            <main className="flex-1 pt-14">{children}</main>
+            <Footer />
+          </ContentProvider>
         </ThemeProvider>
       </body>
     </html>

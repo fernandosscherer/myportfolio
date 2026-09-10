@@ -3,16 +3,29 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { Search, X, ArrowRight, Command } from "lucide-react";
 import Link from "next/link";
-import { searchProjects } from "@/lib/projects";
+import { useContent } from "@/lib/content-store";
 
 export default function CommandPalette() {
+  const { projects } = useContent();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
 
   const inputRef = useRef<HTMLInputElement>(null);
   const openRef = useRef(false);
 
-  const results = useMemo(() => searchProjects(query), [query]);
+  const results = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return projects.slice(0, 6);
+    return projects
+      .filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          p.summary.toLowerCase().includes(q) ||
+          p.tags.some((t) => t.toLowerCase().includes(q)) ||
+          p.category.some((c) => c.toLowerCase().includes(q)),
+      )
+      .slice(0, 8);
+  }, [projects, query]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

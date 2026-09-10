@@ -29,5 +29,6 @@ export const siteConfig = {
     { label: "Resume", href: "/resume" },
     { label: "About", href: "/about" },
     { label: "Contact", href: "/contact" },
+    { label: "Admin", href: "/admin" },
   ],
 } as const;

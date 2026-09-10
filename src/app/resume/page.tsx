@@ -1,17 +1,23 @@
+"use client";
+
 import { Download } from "lucide-react";
-import { experiences, skillGroups } from "@/lib/projects";
+import { useContent } from "@/lib/content-store";
 import { siteConfig } from "@/lib/config";
 
 export default function ResumePage() {
+  const { experiences, skillGroups, pages } = useContent();
+  const copy = pages["/resume"] ?? {};
+  const pageTitle = copy.title ?? "Resume";
+  const pageDescription =
+    copy.description ?? "A concise overview of my professional journey.";
+  const summary = copy.bio ?? siteConfig.headline;
   return (
     <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16">
       <div className="flex justify-between items-start">
         <div>
           <p className="font-mono text-sm text-primary">Curriculum</p>
-          <h1 className="text-3xl font-bold">Resume</h1>
-          <p className="text-muted mt-1">
-            A concise overview of my professional journey.
-          </p>
+          <h1 className="text-3xl font-bold">{pageTitle}</h1>
+          <p className="text-muted mt-1">{pageDescription}</p>
         </div>
         <a
           href="/resume.pdf"
@@ -25,7 +31,7 @@ export default function ResumePage() {
       {/* Summary */}
       <div className="border-t border-border pt-6 mt-10">
         <h2 className="text-lg font-semibold">Summary</h2>
-        <p className="text-muted leading-relaxed mt-3">{siteConfig.headline}</p>
+        <p className="text-muted leading-relaxed mt-3">{summary}</p>
       </div>
 
       {/* Experience */}
@@ -43,11 +49,11 @@ export default function ResumePage() {
           </div>
         ) : (
           <p className="text-sm text-muted mt-3">
-            Add entries to the{" "}
-            <code className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-xs border border-border">
-              experiences
-            </code>{" "}
-            array in src/lib/projects.ts.
+            Add entries in the{" "}
+            <a href="/admin" className="text-primary hover:underline">
+              Content Dashboard
+            </a>
+            .
           </p>
         )}
       </div>

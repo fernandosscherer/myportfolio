@@ -1,20 +1,23 @@
-import { experiences } from "@/lib/projects"
-import { BriefcaseBusiness } from "lucide-react"
+"use client";
+
+import { useContent } from "@/lib/content-store";
+import { BriefcaseBusiness } from "lucide-react";
 
 export default function ExperiencePage() {
+  const { experiences, pages } = useContent();
+  const copy = pages["/experience"] ?? {};
+  const pageTitle = copy.title ?? "Experience";
+  const pageDescription =
+    copy.description ??
+    "By the time I had 4 years of experience, I felt I was just getting started. I’m on a mission to find new challenges and build incredible products.";
   return (
     <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16 animate-fade-in">
       <header className="mb-12">
         <p className="font-mono text-sm text-primary">Career</p>
-        <h1 className="text-3xl font-bold tracking-tight mt-1">Experience</h1>
-        <p className="text-muted mt-3">
-          A timeline of my professional journey, roles, and teams. Add entries
-          in{" "}
-          <code className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-xs border border-border">
-            src/lib/projects.ts
-          </code>
-          .
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight mt-1">
+          {pageTitle}
+        </h1>
+        <p className="text-muted mt-3">{pageDescription}</p>
       </header>
 
       {experiences.length > 0 ? (
@@ -44,8 +47,11 @@ export default function ExperiencePage() {
           <BriefcaseBusiness className="h-8 w-8 text-muted" />
           <p className="font-medium text-foreground">No experience added yet</p>
           <p className="text-sm text-muted">
-            Fill the <code className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-xs">experiences</code>{" "}
-            array to show your timeline.
+            Fill the experiences in the{" "}
+            <a href="/admin" className="text-primary hover:underline">
+              Content Dashboard
+            </a>
+            .
           </p>
         </div>
       )}

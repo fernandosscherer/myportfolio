@@ -17,7 +17,12 @@ export type ProjectLinkType =
   | "youtube"
   | "vimeo"
   | "figma"
-  | "behance";
+  | "behance"
+  | "instagram"
+  | "facebook"
+  | "linkedin"
+  | "x"
+  | "outros";
 
 export interface ProjectLink {
   type: ProjectLinkType;

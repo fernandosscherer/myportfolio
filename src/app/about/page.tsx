@@ -1,13 +1,23 @@
+"use client";
+
 import Link from "next/link";
 import { Mail, MapPin } from "lucide-react";
 import { GithubIcon, LinkedinIcon } from "@/components/Icons";
 import { siteConfig } from "@/lib/config";
+import { useContent } from "@/lib/content-store";
 
 export default function AboutPage() {
+  const { pages } = useContent();
+  const copy = pages["/about"] ?? {};
+  const pageTitle = copy.title ?? siteConfig.name;
+  const bioOne = copy.description ?? siteConfig.headline;
+  const bioTwo =
+    copy.bio ??
+    "With a focus on shipping, I lead projects end-to-end: architecture, interface, infrastructure and deployment.";
   return (
     <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16">
       <p className="font-mono text-sm text-primary mb-2">About</p>
-      <h1 className="text-3xl font-bold mb-8">{siteConfig.name}</h1>
+      <h1 className="text-3xl font-bold mb-8">{pageTitle}</h1>
 
       <div className="rounded-xl border border-border bg-surface p-6 flex items-start gap-4 mb-10">
         <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold text-xl shrink-0">
@@ -20,18 +30,8 @@ export default function AboutPage() {
       </div>
 
       <div className="text-muted leading-relaxed space-y-4 mb-10">
-        <p>
-          {siteConfig.headline}
-        </p>
-        <p>
-          With a focus on shipping, I lead projects end-to-end: architecture,
-          interface, infrastructure and deployment. Replace this text with your
-          own bio in{" "}
-          <code className="rounded bg-surface-hover px-1.5 py-0.5 font-mono text-xs border border-border">
-            src/app/about/page.tsx
-          </code>
-          .
-        </p>
+        <p>{bioOne}</p>
+        <p>{bioTwo}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-10">

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { Search, ArrowUpDown, ArrowRight, FolderGit2 } from "lucide-react"
-import { projects } from "@/lib/projects"
+import { useContent } from "@/lib/content-store"
 import type { ProjectCategory } from "@/types"
 
 const categories: (ProjectCategory | "All")[] = [
@@ -21,6 +21,10 @@ const categories: (ProjectCategory | "All")[] = [
 const statuses = ["All", "Featured", "Completed", "In Progress", "Archived"] as const
 
 export default function ProjectsPage() {
+  const { projects, pages } = useContent()
+  const copy = pages["/projects"] ?? {}
+  const pageTitle = copy.title ?? "Projects"
+  const pageDescription = copy.description ?? "All case studies and experiments"
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState<ProjectCategory | "All">("All")
   const [year, setYear] = useState<string>("All")
@@ -32,7 +36,7 @@ export default function ProjectsPage() {
       if (p.year) set.add(String(p.year))
     }
     return ["All", ...Array.from(set).sort((a, b) => Number(b) - Number(a))]
-  }, [])
+  }, [projects])
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim()
@@ -57,13 +61,13 @@ export default function ProjectsPage() {
 
       return true
     })
-  }, [query, category, year, status])
+  }, [projects, query, category, year, status])
 
   return (
     <main className="max-w-[1280px] mx-auto px-4 md:px-6 py-16 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Projects</h1>
-        <p className="text-muted mt-1">All case studies and experiments</p>
+        <h1 className="text-3xl font-bold">{pageTitle}</h1>
+        <p className="text-muted mt-1">{pageDescription}</p>
       </div>
 
       <div className="relative max-w-md w-full">

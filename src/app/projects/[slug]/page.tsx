@@ -1,11 +1,10 @@
-import { notFound } from "next/navigation";
+"use client";
+
 import Link from "next/link";
-import type { Metadata } from "next";
-import { getProjectBySlug, projects } from "@/lib/projects";
+import Image from "next/image";
+import { useParams } from "next/navigation";
 import {
   ArrowLeft,
-  ExternalLink,
-  GitBranch,
   Check,
   Calendar,
   User,
@@ -13,26 +12,10 @@ import {
   Target,
   Clock,
 } from "lucide-react";
+import { useContent } from "@/lib/content-store";
 import { CATEGORY_TEXT_COLORS } from "@/types";
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
-  const project = getProjectBySlug(slug);
-  if (!project) return {};
-  return {
-    title: project.title,
-    description: project.summary,
-    keywords: project.tags,
-  };
-}
-
-export function generateStaticParams() {
-  return projects.map((p) => ({ slug: p.slug }));
-}
+import LinkTypeIcon from "@/components/LinkTypeIcon";
+import ShareButton from "@/components/ShareButton";
 
 function renderMarkdown(text: string) {
   const lines = text.split("\n");
@@ -88,16 +71,27 @@ function renderMarkdown(text: string) {
   return elements;
 }
 
-export default async function ProjectPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const project = getProjectBySlug(slug);
+export default function ProjectPage() {
+  const params = useParams<{ slug: string }>();
+  const { projects } = useContent();
+  const project = projects.find((p) => p.slug === params.slug);
 
   if (!project) {
-    notFound();
+    return (
+      <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16 text-center">
+        <p className="text-3xl font-bold">Project not found</p>
+        <p className="text-muted mt-2">
+          The project you&apos;re looking for doesn&apos;t exist.
+        </p>
+        <Link
+          href="/projects"
+          className="mt-6 inline-flex items-center gap-2 text-sm text-primary hover:underline"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Projects
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -155,14 +149,14 @@ export default async function ProjectPage({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
             >
-              {link.type === "github" ? (
-                <GitBranch className="h-4 w-4" />
-              ) : (
-                <ExternalLink className="h-4 w-4" />
-              )}
+              <LinkTypeIcon type={link.type} className="h-4 w-4" />
               {link.type === "github" ? "Source" : link.label ?? link.type}
             </a>
           ))}
+          {project.links && project.links.length > 0 && (
+            <span className="h-4 w-px bg-border" aria-hidden="true" />
+          )}
+          <ShareButton path={`/projects/${project.slug}`} label="Share" />
         </div>
       </section>
 
@@ -277,12 +271,23 @@ export default async function ProjectPage({
         <section className="mt-16">
           <h2 className="text-xl font-bold mb-5">Gallery</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {project.images.map((_, i) => (
+            {project.images.map((image, i) => (
               <div
-                key={i}
-                className="aspect-video rounded-lg border border-border bg-surface flex items-center justify-center text-xs text-muted"
+                key={image.id ?? i}
+                className="relative aspect-video overflow-hidden rounded-lg border border-border bg-surface"
               >
-                Cover image
+                <Image
+                  src={image.url}
+                  alt={image.caption ?? project.title}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 33vw"
+                  className="object-cover"
+                />
+                {image.caption && (
+                  <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                    {image.caption}
+                  </span>
+                )}
               </div>
             ))}
           </div>

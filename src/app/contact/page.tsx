@@ -1,17 +1,23 @@
+"use client";
+
 import { Mail, MessageSquare, CalendarClock } from "lucide-react";
 import { GithubIcon, LinkedinIcon } from "@/components/Icons";
 import { siteConfig } from "@/lib/config";
+import { useContent } from "@/lib/content-store";
 
 export default function ContactPage() {
+  const { pages } = useContent();
+  const copy = pages["/contact"] ?? {};
+  const pageTitle = copy.title ?? "Let's talk";
+  const pageDescription =
+    copy.description ??
+    "I'm open to freelance projects, full-time roles and collaborations in AI, Web and Automation.";
   return (
     <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16">
       <header className="text-center space-y-3 mb-10">
         <p className="font-mono text-sm text-primary">Contact</p>
-        <h1 className="text-3xl font-bold">Let&apos;s talk</h1>
-        <p className="text-muted max-w-md mx-auto">
-          I&apos;m open to freelance projects, full-time roles and collaborations
-          in AI, Web and Automation.
-        </p>
+        <h1 className="text-3xl font-bold">{pageTitle}</h1>
+        <p className="text-muted max-w-md mx-auto">{pageDescription}</p>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
