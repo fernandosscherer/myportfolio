@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { Upload, Plus, Trash2 } from "lucide-react";
+import { Upload, Plus, Trash2, Check } from "lucide-react";
 import { useContent } from "@/lib/content-store";
 import { resizeImage } from "@/lib/image-utils";
 import type { ProfileData, ProjectLinkType } from "@/types";
@@ -29,6 +29,7 @@ export default function ProfileTab() {
   const { profile, updateProfile } = useContent();
   const [draft, setDraft] = useState<ProfileData>(() => profileToDraft(profile));
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) =>
@@ -75,6 +76,8 @@ export default function ProfileTab() {
 
   const handleSave = () => {
     updateProfile(draft);
+    setSaving(true);
+    window.setTimeout(() => setSaving(false), 2000);
   };
 
   return (
@@ -285,7 +288,13 @@ export default function ProfileTab() {
       </section>
 
       {/* Save */}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-3">
+        {saving && (
+          <span className="inline-flex items-center gap-1.5 text-sm text-success animate-fade-in">
+            <Check className="h-4 w-4" />
+            Saved — live on the site now
+          </span>
+        )}
         <button
           type="button"
           onClick={handleSave}

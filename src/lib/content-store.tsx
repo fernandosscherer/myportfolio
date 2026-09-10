@@ -125,19 +125,29 @@ function loadPersisted(): PersistedContent {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return cloneSeed();
-    const parsed = JSON.parse(raw) as PersistedContent;
-    if (
-      typeof parsed.profile !== "object" ||
-      parsed.profile === null ||
-      !Array.isArray(parsed.projects) ||
-      !Array.isArray(parsed.experiences) ||
-      !Array.isArray(parsed.skillGroups) ||
-      typeof parsed.pages !== "object" ||
-      parsed.pages === null
-    ) {
-      return cloneSeed();
-    }
-    return parsed;
+    const parsed = JSON.parse(raw) as Partial<PersistedContent> | null;
+    if (!parsed || typeof parsed !== "object") return cloneSeed();
+    const base = cloneSeed();
+    return {
+      profile: {
+        ...base.profile,
+        ...(parsed.profile &&
+        typeof parsed.profile === "object" &&
+        !Array.isArray(parsed.profile)
+          ? parsed.profile
+          : {}),
+      },
+      projects: Array.isArray(parsed.projects) ? parsed.projects : base.projects,
+      experiences: Array.isArray(parsed.experiences)
+        ? parsed.experiences
+        : base.experiences,
+      skillGroups: Array.isArray(parsed.skillGroups)
+        ? parsed.skillGroups
+        : base.skillGroups,
+      pages: parsed.pages && typeof parsed.pages === "object" && !Array.isArray(parsed.pages)
+        ? parsed.pages
+        : {},
+    };
   } catch {
     return cloneSeed();
   }
