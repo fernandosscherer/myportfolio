@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Mail, Menu, X } from "lucide-react";
-import { useContent } from "@/lib/content-store";
+import { PAGE_ROUTES, useContent } from "@/lib/content-store";
 import LinkTypeIcon from "@/components/LinkTypeIcon";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -14,12 +14,9 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const standardLinks = [
-    { label: "Projects", href: "/projects" },
-    { label: "Experience", href: "/experience" },
-    { label: "Skills", href: "/skills" },
-    { label: "Resume", href: "/resume" },
-    { label: "About", href: "/about" },
-    { label: "Contact", href: "/contact" },
+    ...PAGE_ROUTES.filter(({ route }) => route !== "/").map(
+      ({ label, route }) => ({ label, href: route }),
+    ),
     { label: "Admin", href: "/admin" },
   ];
 

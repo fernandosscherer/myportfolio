@@ -125,15 +125,14 @@ export default function ProjectPage() {
             <Calendar className="h-3.5 w-3.5" />
             {project.year}
           </span>
-          <span
-            className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
-              project.status === "Featured"
-                ? "bg-primary/10 text-primary border-primary/20"
-                : "bg-surface-hover text-muted border-border"
-            }`}
-          >
+          <span className="px-2.5 py-1 rounded-full text-xs font-medium border bg-surface-hover text-muted border-border">
             {project.status}
           </span>
+          {project.featured && (
+            <span className="px-2.5 py-1 rounded-full text-xs font-medium border bg-primary/10 text-primary border-primary/20">
+              Featured
+            </span>
+          )}
         </div>
 
         <p className="text-lg text-muted max-w-content mb-8">
@@ -280,6 +279,7 @@ export default function ProjectPage() {
                   src={image.url}
                   alt={image.caption ?? project.title}
                   fill
+                  unoptimized
                   sizes="(max-width: 768px) 50vw, 33vw"
                   className="object-cover"
                 />
@@ -294,14 +294,6 @@ export default function ProjectPage() {
         </section>
       )}
 
-      {project.architecture && (
-        <section className="mt-16">
-          <h2 className="text-xl font-bold mb-5">Architecture</h2>
-          <div className="rounded-xl border border-border bg-surface aspect-video flex items-center justify-center text-sm text-muted">
-            Architecture diagram
-          </div>
-        </section>
-      )}
     </div>
   );
 }

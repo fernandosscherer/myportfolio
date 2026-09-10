@@ -1,16 +1,15 @@
 "use client";
 
-import { useContent } from "@/lib/content-store";
+import { PAGE_DEFAULTS, useContent } from "@/lib/content-store";
 import Link from "next/link";
 import { BriefcaseBusiness } from "lucide-react";
 
 export default function ExperiencePage() {
   const { experiences, pages } = useContent();
   const copy = pages["/experience"] ?? {};
-  const pageTitle = copy.title ?? "Experience";
+  const pageTitle = copy.title ?? PAGE_DEFAULTS["/experience"].title;
   const pageDescription =
-    copy.description ??
-    "By the time I had 4 years of experience, I felt I was just getting started. I’m on a mission to find new challenges and build incredible products.";
+    copy.description ?? PAGE_DEFAULTS["/experience"].description;
   return (
     <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16 animate-fade-in">
       <header className="mb-12">

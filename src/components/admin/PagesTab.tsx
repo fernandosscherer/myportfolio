@@ -8,7 +8,11 @@ import {
   useContent,
 } from "@/lib/content-store";
 import type { PageCopy } from "@/lib/content-store";
-import { siteConfig } from "@/lib/config";
+import type { ProfileData } from "@/types";
+import {
+  getCustomPageSlugError,
+  normalizeSlug,
+} from "@/lib/content-validation";
 
 interface FieldConfig {
   key: keyof PageCopy;
@@ -39,15 +43,18 @@ const SPECIAL_FIELDS: Record<string, FieldConfig[]> = {
   ],
 };
 
-function fallback(route: string, field: keyof PageCopy): string {
+function fallback(
+  route: string,
+  field: keyof PageCopy,
+  profile: ProfileData,
+): string {
   const page = PAGE_DEFAULTS[route];
   if (!page) return "";
-  if (field === "headline") return siteConfig.headline;
-  if (route === "/about" && field === "bio")
-    return "With a focus on shipping, I lead projects end-to-end: architecture, interface, infrastructure and deployment.";
-  if (route === "/resume" && field === "bio") return siteConfig.headline;
+  if (field === "headline") return profile.headline;
+  if (route === "/about" && field === "title") return profile.name;
+  if (route === "/resume" && field === "bio") return profile.headline;
   if (field === "title") return page.title;
-  if (field === "bio") return "";
+  if (field === "bio") return page.bio ?? "";
   return page.description;
 }
 
@@ -55,6 +62,7 @@ export default function PagesTab() {
   const { pages, deletePageCopy } = useContent();
   const [editingRoute, setEditingRoute] = useState<string | null>(null);
   const [showNewPage, setShowNewPage] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   const customPages = Object.entries(pages)
     .filter(([, v]) => v.custom)
@@ -81,6 +89,12 @@ export default function PagesTab() {
         />
       )}
 
+      {actionError && (
+        <p role="alert" className="mb-4 text-sm text-destructive">
+          {actionError}
+        </p>
+      )}
+
       {editingRoute && (
         <div className="rounded-xl border border-border bg-surface p-6 mb-5">
           <div className="flex items-center justify-between mb-5">
@@ -92,7 +106,11 @@ export default function PagesTab() {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <PageForm route={editingRoute} onDone={() => setEditingRoute(null)} />
+          <PageForm
+            key={editingRoute}
+            route={editingRoute}
+            onDone={() => setEditingRoute(null)}
+          />
         </div>
       )}
 
@@ -155,7 +173,11 @@ export default function PagesTab() {
                 type="button"
                 onClick={() => {
                   if (confirm(`Delete custom page "${title}"?`)) {
-                    deletePageCopy(route);
+                    if (!deletePageCopy(route)) {
+                      setActionError("Browser storage is full or unavailable.");
+                    } else {
+                      setActionError("");
+                    }
                   }
                 }}
                 className="p-2 text-muted hover:text-destructive transition-colors"
@@ -171,23 +193,30 @@ export default function PagesTab() {
 }
 
 function NewPageForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () => void }) {
-  const { addCustomPage } = useContent();
+  const { addCustomPage, pages } = useContent();
   const [label, setLabel] = useState("");
   const [slug, setSlug] = useState("");
+  const [error, setError] = useState("");
 
-  const autoSlug = label
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  const autoSlug = normalizeSlug(label);
 
-  const effectiveSlug = slug || autoSlug;
+  const effectiveSlug = normalizeSlug(slug || autoSlug);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!label.trim() || !effectiveSlug) return;
-    addCustomPage(label.trim(), effectiveSlug);
+    const slugError = getCustomPageSlugError(
+      effectiveSlug,
+      Object.keys(pages),
+    );
+    if (slugError) {
+      setError(slugError);
+      return;
+    }
+    if (!addCustomPage(label.trim(), effectiveSlug)) {
+      setError("Could not save the page. Browser storage may be full.");
+      return;
+    }
     onAdd();
   };
 
@@ -204,6 +233,7 @@ function NewPageForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () => v
           <p className="text-xs text-muted mt-1">Route: /{effectiveSlug || "..."}</p>
         </div>
       </div>
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex items-center justify-end gap-2">
         <button type="button" onClick={onCancel} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-hover">Cancel</button>
         <button type="submit" className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover">Create page</button>
@@ -213,14 +243,15 @@ function NewPageForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () => v
 }
 
 function PageForm({ route, onDone }: { route: string; onDone: () => void }) {
-  const { pages, updatePageCopy, resetPageCopy } = useContent();
+  const { pages, profile, updatePageCopy, resetPageCopy } = useContent();
   const isCustom = !!pages[route]?.custom;
   const fields = SPECIAL_FIELDS[route] ?? COMMON_FIELDS;
   const [draft, setDraft] = useState<PageCopy>(() => {
     const current = pages[route] ?? {};
     const result: Record<string, unknown> = {};
     for (const field of fields) {
-      result[field.key] = (current[field.key] as string) ?? fallback(route, field.key);
+      result[field.key] =
+        (current[field.key] as string) ?? fallback(route, field.key, profile);
     }
     if (isCustom) {
       result.title = current.title ?? "";
@@ -231,9 +262,13 @@ function PageForm({ route, onDone }: { route: string; onDone: () => void }) {
     }
     return result as PageCopy;
   });
+  const [saveError, setSaveError] = useState("");
 
   const handleSave = () => {
-    updatePageCopy(route, draft);
+    if (!updatePageCopy(route, draft)) {
+      setSaveError("Browser storage is full or unavailable.");
+      return;
+    }
     onDone();
   };
 
@@ -241,7 +276,10 @@ function PageForm({ route, onDone }: { route: string; onDone: () => void }) {
     if (isCustom) {
       onDone();
     } else if (confirm(`Reset "${route}" to the default text?`)) {
-      resetPageCopy(route);
+      if (!resetPageCopy(route)) {
+        setSaveError("Browser storage is full or unavailable.");
+        return;
+      }
       onDone();
     }
   };
@@ -283,15 +321,25 @@ function PageForm({ route, onDone }: { route: string; onDone: () => void }) {
         {!isCustom && fields.map((field) => (
           <div key={field.key}>
             <label className="mb-1.5 block text-xs font-medium text-muted">{field.label}</label>
-            <input
-              type="text"
-              value={(draft[field.key] as string | undefined) ?? ""}
-              onChange={(e) => setDraft((prev) => ({ ...prev, [field.key]: e.target.value }))}
-              className="rounded-md border border-border bg-surface px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-primary/30"
-            />
+            {field.textarea ? (
+              <textarea
+                rows={4}
+                value={(draft[field.key] as string | undefined) ?? ""}
+                onChange={(e) => setDraft((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                className="rounded-md border border-border bg-surface px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            ) : (
+              <input
+                type="text"
+                value={(draft[field.key] as string | undefined) ?? ""}
+                onChange={(e) => setDraft((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                className="rounded-md border border-border bg-surface px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            )}
           </div>
         ))}
       </div>
+      {saveError && <p role="alert" className="mt-4 text-sm text-destructive">{saveError}</p>}
       <div className="flex items-center justify-end gap-2 mt-6">
         {!isCustom && (
           <button type="button" onClick={handleReset} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground hover:bg-surface-hover transition-colors">

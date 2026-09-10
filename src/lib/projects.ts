@@ -1,4 +1,4 @@
-import { Project, Experience, SkillGroup, ProjectCategory } from "@/types";
+import type { Project, Experience, SkillGroup } from "@/types";
 
 // Add your own projects here. Full field reference:
 //
@@ -10,7 +10,7 @@ import { Project, Experience, SkillGroup, ProjectCategory } from "@/types";
 //     description: "## Overview\n\nMarkdown-ish case study body.",
 //     category: ["SaaS"],                 // from: AI, Automation, WordPress, SaaS,
 //                                         //        Dashboard, API, Cloud, Design System
-//     status: "Featured",                 // Featured | Completed | In Progress | Archived
+//     status: "Completed",                // Completed | In Progress | Archived
 //     year: 2024,
 //     client: "Client name (optional)",
 //     featured: true,                     // shows on the Home page
@@ -21,7 +21,6 @@ import { Project, Experience, SkillGroup, ProjectCategory } from "@/types";
 //     challenges: "…",
 //     solution: "…",
 //     images: [{ id: "i1", url: "/cover.png", caption: "…", order: 0 }],
-//     architecture: "/architecture.png",  // optional diagram
 //   }
 export const projects: Project[] = [
   {
@@ -52,7 +51,7 @@ Built a unified trading platform that centralizes market data, automation, analy
 - Trading automation and alert system implementation
 - Cloud deployment with performance optimization and security`,
     category: ["AI", "Dashboard", "SaaS"],
-    status: "Featured",
+    status: "Completed",
     year: 2024,
     client: "Data Maple AI",
     featured: true,
@@ -322,27 +321,3 @@ export const skillGroups: SkillGroup[] = [
     ],
   },
 ];
-
-export function getProjectBySlug(slug: string): Project | undefined {
-  return projects.find((p) => p.slug === slug);
-}
-
-export function getFeaturedProjects(): Project[] {
-  return projects.filter((p) => p.featured);
-}
-
-export function getProjectsByCategory(category: ProjectCategory): Project[] {
-  return projects.filter((p) => p.category.includes(category));
-}
-
-export function searchProjects(query: string): Project[] {
-  const q = query.toLowerCase();
-  return projects.filter(
-    (p) =>
-      p.title.toLowerCase().includes(q) ||
-      p.summary.toLowerCase().includes(q) ||
-      p.tags.some((t) => t.toLowerCase().includes(q)) ||
-      p.category.some((c) => c.toLowerCase().includes(q)) ||
-      p.client.toLowerCase().includes(q)
-  );
-}

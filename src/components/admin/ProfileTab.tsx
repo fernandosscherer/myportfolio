@@ -5,18 +5,10 @@ import Image from "next/image";
 import { Upload, Plus, Trash2, Check } from "lucide-react";
 import { useContent } from "@/lib/content-store";
 import { resizeImage } from "@/lib/image-utils";
+import { getSafeExternalUrl } from "@/lib/content-validation";
+import { PROFILE_LINK_TYPES } from "@/types";
 import type { ProfileData, ProjectLinkType } from "@/types";
 import LinkTypeIcon from "@/components/LinkTypeIcon";
-
-const LINK_TYPES: ProjectLinkType[] = [
-  "github",
-  "website",
-  "linkedin",
-  "instagram",
-  "facebook",
-  "x",
-  "outros",
-];
 
 const inputClass =
   "rounded-md border border-border bg-surface px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-primary/30";
@@ -29,11 +21,14 @@ export default function ProfileTab() {
   const { profile, updateProfile } = useContent();
   const [draft, setDraft] = useState<ProfileData>(() => profileToDraft(profile));
   const [photoUploading, setPhotoUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState("");
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const set = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) =>
+  const set = <K extends keyof ProfileData>(key: K, value: ProfileData[K]) => {
+    setSaveStatus("idle");
     setDraft((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -75,9 +70,24 @@ export default function ProfileTab() {
   };
 
   const handleSave = () => {
-    updateProfile(draft);
-    setSaving(true);
-    window.setTimeout(() => setSaving(false), 2000);
+    const urls = [
+      draft.website,
+      draft.calendly,
+      draft.companyWebsite,
+      ...draft.socials.map((link) => link.url),
+    ].filter(Boolean) as string[];
+    if (urls.some((url) => !getSafeExternalUrl(url))) {
+      setSaveError("Links must use http:// or https://.");
+      setSaveStatus("error");
+      return;
+    }
+    if (!updateProfile(draft)) {
+      setSaveError("Browser storage is full or unavailable. Remove large images and try again.");
+      setSaveStatus("error");
+      return;
+    }
+    setSaveError("");
+    setSaveStatus("saved");
   };
 
   return (
@@ -223,7 +233,7 @@ export default function ProfileTab() {
                   onChange={(e) => updateSocial(i, { type: e.target.value as ProjectLinkType })}
                   className="w-36 shrink-0 rounded-md border border-border bg-surface px-2 py-2 text-sm outline-none"
                 >
-                  {LINK_TYPES.map((t) => (
+                  {PROFILE_LINK_TYPES.map((t) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
@@ -289,10 +299,15 @@ export default function ProfileTab() {
 
       {/* Save */}
       <div className="flex items-center justify-end gap-3">
-        {saving && (
+        {saveStatus === "saved" && (
           <span className="inline-flex items-center gap-1.5 text-sm text-success animate-fade-in">
             <Check className="h-4 w-4" />
             Saved — live on the site now
+          </span>
+        )}
+        {saveStatus === "error" && (
+          <span role="alert" className="text-sm text-destructive">
+            {saveError}
           </span>
         )}
         <button

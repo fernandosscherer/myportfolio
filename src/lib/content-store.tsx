@@ -14,6 +14,17 @@ import {
   skillGroups as seedSkillGroups,
 } from "@/lib/projects";
 import { siteConfig } from "@/lib/config";
+import {
+  getCustomPageSlugError,
+  getSafeExternalUrl,
+  isSafeImageSource,
+  normalizeSlug,
+} from "@/lib/content-validation";
+import {
+  PROJECT_CATEGORIES,
+  PROJECT_LINK_TYPES,
+  PROJECT_STATUSES,
+} from "@/types";
 import type { Experience, ProfileData, Project, SkillGroup } from "@/types";
 
 export interface PageCopy {
@@ -21,7 +32,6 @@ export interface PageCopy {
   description?: string;
   headline?: string;
   bio?: string;
-  cta?: string;
   custom?: boolean;
   slug?: string;
   showInNav?: boolean;
@@ -72,15 +82,20 @@ export const PAGE_ROUTES = [
   { route: "/contact", label: "Contact" },
 ] as const;
 
-export const PAGE_DEFAULTS: Record<string, { title: string; description: string }> = {
+interface PageDefaults extends PageCopy {
+  title: string;
+  description: string;
+}
+
+export const PAGE_DEFAULTS: Record<string, PageDefaults> = {
   "/": {
-    title: "Home",
+    title: "Let's build something together",
     description:
-      "Once I have a clear picture of what you need, I start by understanding the problem and sketching the first version of the solution.",
+      "I help startups and companies build high-quality websites, SaaS products, AI integrations and automation systems.",
   },
   "/projects": {
-    title: "Selected Projects",
-    description: "All case studies and experiments I’ve been working on.",
+    title: "Projects",
+    description: "All case studies and experiments",
   },
   "/experience": {
     title: "Experience",
@@ -88,24 +103,23 @@ export const PAGE_DEFAULTS: Record<string, { title: string; description: string 
       "By the time I had 4 years of experience, I felt I was just getting started. I’m on a mission to find new challenges and build incredible products.",
   },
   "/skills": {
-    title: "Toolbox",
+    title: "Skills",
     description:
-      "The tools, languages and frameworks I use every day to build and ship.",
+      "The technologies and tools I use to build production-ready products.",
   },
   "/resume": {
     title: "Resume",
-    description:
-      "My experience in one page — download it and let’s talk if it’s a match.",
+    description: "A concise overview of my professional journey.",
   },
   "/about": {
-    title: "About",
-    description:
-      "I’m a Senior Web Designer, WordPress Engineer and AI Automation specialist with over 20 years of experience. I build websites, SaaS products, AI agents and automation systems for startups and businesses.",
+    title: siteConfig.name,
+    description: siteConfig.headline,
+    bio: "With a focus on shipping, I lead projects end-to-end: architecture, interface, infrastructure and deployment.",
   },
   "/contact": {
     title: "Let’s talk",
     description:
-      "If you have a project in mind, or just want to say hi, drop me a line.",
+      "I'm open to freelance projects, full-time roles and collaborations in AI, Web and Automation.",
   },
 };
 
@@ -120,6 +134,33 @@ function cloneSeed(): PersistedContent {
   };
 }
 
+function text(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function normalizePages(value: unknown): Record<string, PageCopy> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const pages: Record<string, PageCopy> = {};
+  for (const [route, rawPage] of Object.entries(value)) {
+    if (!rawPage || typeof rawPage !== "object") continue;
+    const page = rawPage as PageCopy;
+    if (!page.custom) {
+      if (PAGE_DEFAULTS[route]) pages[route] = page;
+      continue;
+    }
+    const slugBase = normalizeSlug(page.slug ?? route.slice(1));
+    if (getCustomPageSlugError(slugBase, [])) continue;
+    let slug = slugBase;
+    let suffix = 2;
+    while (pages[`/${slug}`]) {
+      slug = `${slugBase}-${suffix}`;
+      suffix += 1;
+    }
+    pages[`/${slug}`] = { ...page, slug };
+  }
+  return pages;
+}
+
 function loadPersisted(): PersistedContent {
   if (typeof window === "undefined") return cloneSeed();
   try {
@@ -128,38 +169,149 @@ function loadPersisted(): PersistedContent {
     const parsed = JSON.parse(raw) as Partial<PersistedContent> | null;
     if (!parsed || typeof parsed !== "object") return cloneSeed();
     const base = cloneSeed();
+    const storedProfile: Partial<ProfileData> =
+      parsed.profile &&
+      typeof parsed.profile === "object" &&
+      !Array.isArray(parsed.profile)
+        ? parsed.profile
+        : {};
+    const profile: ProfileData = {
+      ...base.profile,
+      name: text(storedProfile.name, base.profile.name),
+      initials: text(storedProfile.initials, base.profile.initials),
+      role: text(storedProfile.role, base.profile.role),
+      headline: text(storedProfile.headline, base.profile.headline),
+      location: text(storedProfile.location, base.profile.location),
+      availability: text(
+        storedProfile.availability,
+        base.profile.availability,
+      ),
+      email: text(storedProfile.email, base.profile.email),
+      phone: text(storedProfile.phone),
+      website:
+        storedProfile.website === undefined
+          ? base.profile.website
+          : (getSafeExternalUrl(storedProfile.website) ?? ""),
+      photo: isSafeImageSource(storedProfile.photo) ? storedProfile.photo : "",
+      calendly: getSafeExternalUrl(storedProfile.calendly) ?? "",
+      responseTime: text(storedProfile.responseTime, base.profile.responseTime),
+      companyName: text(storedProfile.companyName),
+      companyDescription: text(storedProfile.companyDescription),
+      companyWebsite: getSafeExternalUrl(storedProfile.companyWebsite) ?? "",
+      socials: Array.isArray(storedProfile.socials)
+        ? storedProfile.socials.filter(
+            (link) =>
+              link &&
+              PROJECT_LINK_TYPES.includes(link.type) &&
+              typeof link.url === "string" &&
+              getSafeExternalUrl(link.url),
+          )
+        : base.profile.socials,
+      indicators: Array.isArray(storedProfile.indicators)
+        ? storedProfile.indicators
+            .filter((indicator) => indicator && typeof indicator === "object")
+            .map((indicator) => ({
+              value: text(indicator.value),
+              label: text(indicator.label),
+            }))
+        : base.profile.indicators,
+    };
+    const usedProjectSlugs = new Set<string>();
+    const projects = Array.isArray(parsed.projects)
+      ? parsed.projects
+          .filter((project) => project && typeof project === "object")
+          .map((project, index) => {
+            const title = text(project.title, `Untitled Project ${index + 1}`);
+            const slugBase = normalizeSlug(text(project.slug, title)) || `project-${index + 1}`;
+            let slug = slugBase;
+            let suffix = 2;
+            while (usedProjectSlugs.has(slug)) {
+              slug = `${slugBase}-${suffix}`;
+              suffix += 1;
+            }
+            usedProjectSlugs.add(slug);
+            const legacyStatus = text(project.status);
+            const status = PROJECT_STATUSES.includes(
+              legacyStatus as Project["status"],
+            )
+              ? (legacyStatus as Project["status"])
+              : "Completed";
+            return {
+              ...project,
+              id: text(project.id, crypto.randomUUID()),
+              title,
+              slug,
+              summary: text(project.summary),
+              description: text(project.description),
+              status,
+              year:
+                typeof project.year === "number" && Number.isFinite(project.year)
+                  ? project.year
+                  : new Date().getFullYear(),
+              client: text(project.client),
+              featured: Boolean(project.featured || legacyStatus === "Featured"),
+              category: Array.isArray(project.category)
+                ? project.category.filter((category) =>
+                    PROJECT_CATEGORIES.includes(category),
+                  )
+                : [],
+              tags: Array.isArray(project.tags)
+                ? project.tags.filter((tag) => typeof tag === "string")
+                : [],
+              links: Array.isArray(project.links)
+                ? project.links.filter(
+                    (link) =>
+                      link &&
+                      PROJECT_LINK_TYPES.includes(link.type) &&
+                      typeof link.url === "string" &&
+                      getSafeExternalUrl(link.url),
+                  )
+                : [],
+              images: Array.isArray(project.images)
+                ? project.images.filter(
+                    (image) =>
+                      image &&
+                      typeof image.url === "string" &&
+                      isSafeImageSource(image.url),
+                  )
+                : [],
+              created_at: text(project.created_at),
+              updated_at: text(project.updated_at),
+            };
+          })
+      : base.projects;
     return {
-      profile: {
-        ...base.profile,
-        ...(parsed.profile &&
-        typeof parsed.profile === "object" &&
-        !Array.isArray(parsed.profile)
-          ? parsed.profile
-          : {}),
-      },
-      projects: Array.isArray(parsed.projects) ? parsed.projects : base.projects,
+      profile,
+      projects,
       experiences: Array.isArray(parsed.experiences)
         ? parsed.experiences
+            .filter((experience) => experience && typeof experience === "object")
+            .map((experience) => ({
+              ...experience,
+              id: text(experience.id, crypto.randomUUID()),
+              period: text(experience.period),
+              title: text(experience.title),
+              company: text(experience.company),
+              description: text(experience.description),
+              current: Boolean(experience.current),
+            }))
         : base.experiences,
       skillGroups: Array.isArray(parsed.skillGroups)
         ? parsed.skillGroups
+            .filter((group) => group && typeof group === "object")
+            .map((group) => ({
+              ...group,
+              category: text(group.category, "General"),
+              skills: Array.isArray(group.skills)
+                ? group.skills.filter((skill) => typeof skill === "string")
+                : [],
+            }))
         : base.skillGroups,
-      pages: parsed.pages && typeof parsed.pages === "object" && !Array.isArray(parsed.pages)
-        ? parsed.pages
-        : {},
+      pages: normalizePages(parsed.pages),
     };
   } catch {
     return cloneSeed();
   }
-}
-
-function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 let state: PersistedContent = cloneSeed();
@@ -182,32 +334,55 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-function applyState(next: PersistedContent) {
+function applyState(next: PersistedContent, persist = hydrated): boolean {
+  if (persist && typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      return false;
+    }
+  }
   state = next;
   listeners.forEach((listener) => listener());
+  return true;
 }
 
 function hydrate() {
   if (hydrated) return;
   hydrated = true;
-  applyState(loadPersisted());
+  applyState(loadPersisted(), false);
+}
+
+function getUniqueProjectSlug(value: string, excludedId?: string): string {
+  const base = normalizeSlug(value) || "project";
+  let candidate = base;
+  let suffix = 2;
+  while (
+    state.projects.some(
+      (project) => project.id !== excludedId && project.slug === candidate,
+    )
+  ) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
 }
 
 interface ContentContextValue extends PersistedContent {
-  updateProfile: (patch: Partial<ProfileData>) => void;
-  addProject: (draft: ProjectDraft) => void;
-  updateProject: (id: string, patch: Partial<Project>) => void;
-  deleteProject: (id: string) => void;
-  addExperience: (data: Omit<Experience, "id">) => void;
-  updateExperience: (id: string, patch: Partial<Experience>) => void;
-  deleteExperience: (id: string) => void;
-  upsertSkillGroup: (skillGroup: SkillGroup) => void;
-  deleteSkillGroup: (category: string) => void;
-  addCustomPage: (label: string, slug: string) => void;
-  updatePageCopy: (route: string, patch: PageCopy) => void;
-  deletePageCopy: (route: string) => void;
-  resetPageCopy: (route: string) => void;
-  resetContent: () => void;
+  updateProfile: (patch: Partial<ProfileData>) => boolean;
+  addProject: (draft: ProjectDraft) => boolean;
+  updateProject: (id: string, patch: Partial<Project>) => boolean;
+  deleteProject: (id: string) => boolean;
+  addExperience: (data: Omit<Experience, "id">) => boolean;
+  updateExperience: (id: string, patch: Partial<Experience>) => boolean;
+  deleteExperience: (id: string) => boolean;
+  upsertSkillGroup: (skillGroup: SkillGroup, previousCategory?: string) => boolean;
+  deleteSkillGroup: (category: string) => boolean;
+  addCustomPage: (label: string, slug: string) => boolean;
+  updatePageCopy: (route: string, patch: PageCopy) => boolean;
+  deletePageCopy: (route: string) => boolean;
+  resetPageCopy: (route: string) => boolean;
+  resetContent: () => boolean;
 }
 
 const ContentContext = createContext<ContentContextValue | null>(null);
@@ -221,27 +396,33 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     hydrate();
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY) applyState(loadPersisted(), false);
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(content));
-    } catch {
-      // storage unavailable or full — keep session state
-    }
-  }, [content]);
-
   const updateProfile = useCallback((patch: Partial<ProfileData>) => {
-    applyState({ ...state, profile: { ...state.profile, ...patch } });
+    return applyState({ ...state, profile: { ...state.profile, ...patch } });
   }, []);
 
   const addCustomPage = useCallback((label: string, slug: string) => {
-    const route = `/${slug}`;
-    applyState({
+    const normalizedSlug = normalizeSlug(slug);
+    if (getCustomPageSlugError(normalizedSlug, Object.keys(state.pages))) {
+      return false;
+    }
+    const route = `/${normalizedSlug}`;
+    return applyState({
       ...state,
       pages: {
         ...state.pages,
-        [route]: { title: label, custom: true, slug, showInNav: true },
+        [route]: {
+          title: label,
+          custom: true,
+          slug: normalizedSlug,
+          showInNav: true,
+        },
       },
     });
   }, []);
@@ -249,12 +430,12 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   const deletePageCopy = useCallback((route: string) => {
     const pages = { ...state.pages };
     delete pages[route];
-    applyState({ ...state, pages });
+    return applyState({ ...state, pages });
   }, []);
 
   const addProject = useCallback((draft: ProjectDraft) => {
     const now = new Date().toISOString();
-    const slug = draft.slug.trim() || slugify(draft.title);
+    const slug = getUniqueProjectSlug(draft.slug || draft.title);
     const project: Project = {
       ...draft,
       id: crypto.randomUUID(),
@@ -262,12 +443,14 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       created_at: now,
       updated_at: now,
     };
-    applyState({ ...state, projects: [...state.projects, project] });
+    return applyState({ ...state, projects: [...state.projects, project] });
   }, []);
 
   const updateProject = useCallback((id: string, patch: Partial<Project>) => {
-    const slug = patch.slug?.trim() || undefined;
-    applyState({
+    const slug = patch.slug
+      ? getUniqueProjectSlug(patch.slug, id)
+      : undefined;
+    return applyState({
       ...state,
       projects: state.projects.map((p) =>
         p.id === id
@@ -283,7 +466,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteProject = useCallback((id: string) => {
-    applyState({
+    return applyState({
       ...state,
       projects: state.projects.filter((p) => p.id !== id),
     });
@@ -291,12 +474,15 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
   const addExperience = useCallback((data: Omit<Experience, "id">) => {
     const experience: Experience = { ...data, id: crypto.randomUUID() };
-    applyState({ ...state, experiences: [...state.experiences, experience] });
+    return applyState({
+      ...state,
+      experiences: [...state.experiences, experience],
+    });
   }, []);
 
   const updateExperience = useCallback(
     (id: string, patch: Partial<Experience>) => {
-      applyState({
+      return applyState({
         ...state,
         experiences: state.experiences.map((e) =>
           e.id === id ? { ...e, ...patch } : e,
@@ -307,17 +493,34 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   );
 
   const deleteExperience = useCallback((id: string) => {
-    applyState({
+    return applyState({
       ...state,
       experiences: state.experiences.filter((e) => e.id !== id),
     });
   }, []);
 
-  const upsertSkillGroup = useCallback((skillGroup: SkillGroup) => {
+  const upsertSkillGroup = useCallback((
+    skillGroup: SkillGroup,
+    previousCategory?: string,
+  ) => {
+    if (previousCategory) {
+      const duplicateCategory = state.skillGroups.some(
+        (group) =>
+          group.category === skillGroup.category &&
+          group.category !== previousCategory,
+      );
+      if (duplicateCategory) return false;
+      return applyState({
+        ...state,
+        skillGroups: state.skillGroups.map((group) =>
+          group.category === previousCategory ? skillGroup : group,
+        ),
+      });
+    }
     const exists = state.skillGroups.some(
       (g) => g.category === skillGroup.category,
     );
-    applyState({
+    return applyState({
       ...state,
       skillGroups: exists
         ? state.skillGroups.map((g) =>
@@ -328,7 +531,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteSkillGroup = useCallback((category: string) => {
-    applyState({
+    return applyState({
       ...state,
       skillGroups: state.skillGroups.filter((g) => g.category !== category),
     });
@@ -342,7 +545,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
         filtered[key as keyof PageCopy] = value as never;
       }
     }
-    applyState({
+    return applyState({
       ...state,
       pages: { ...state.pages, [route]: filtered },
     });
@@ -351,11 +554,11 @@ export function ContentProvider({ children }: { children: ReactNode }) {
   const resetPageCopy = useCallback((route: string) => {
     const pages = { ...state.pages };
     delete pages[route];
-    applyState({ ...state, pages });
+    return applyState({ ...state, pages });
   }, []);
 
   const resetContent = useCallback(() => {
-    applyState(cloneSeed());
+    return applyState(cloneSeed());
   }, []);
 
   const value: ContentContextValue = {

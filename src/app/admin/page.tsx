@@ -146,22 +146,37 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>("projects");
   const [editor, setEditor] = useState<EditorState>(null);
+  const [saveError, setSaveError] = useState("");
 
   const handleProjectSubmit = (draft: ProjectDraft) => {
     if (editor?.kind === "project" && editor.project) {
-      updateProject(editor.project.id, draft);
+      if (!updateProject(editor.project.id, draft)) {
+        setSaveError("Browser storage is full or unavailable.");
+        return;
+      }
     } else {
-      addProject(draft);
+      if (!addProject(draft)) {
+        setSaveError("Browser storage is full or unavailable.");
+        return;
+      }
     }
+    setSaveError("");
     setEditor(null);
   };
 
   const handleExperienceSubmit = (data: Omit<Experience, "id">) => {
     if (editor?.kind === "experience" && editor.experience) {
-      updateExperience(editor.experience.id, data);
+      if (!updateExperience(editor.experience.id, data)) {
+        setSaveError("Browser storage is full or unavailable.");
+        return;
+      }
     } else {
-      addExperience(data);
+      if (!addExperience(data)) {
+        setSaveError("Browser storage is full or unavailable.");
+        return;
+      }
     }
+    setSaveError("");
     setEditor(null);
   };
 
@@ -179,7 +194,11 @@ export default function AdminPage() {
           type="button"
           onClick={() => {
             if (confirm("Reset all content to the default seed?")) {
-              resetContent();
+              if (!resetContent()) {
+                setSaveError("Browser storage is full or unavailable.");
+                return;
+              }
+              setSaveError("");
               setEditor(null);
             }
           }}
@@ -195,6 +214,12 @@ export default function AdminPage() {
         pages instantly.
       </div>
 
+      {saveError && (
+        <p role="alert" className="mb-4 text-sm text-destructive">
+          {saveError}
+        </p>
+      )}
+
       <nav className="flex items-center gap-1 mb-8 flex-wrap">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -205,6 +230,7 @@ export default function AdminPage() {
               onClick={() => {
                 setActiveTab(tab.key);
                 setEditor(null);
+                setSaveError("");
               }}
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                 activeTab === tab.key
@@ -229,6 +255,7 @@ export default function AdminPage() {
               onClose: () => setEditor(null),
               children: (
                 <ProjectForm
+                  key={editor.project?.id ?? "new-project"}
                   initial={editor.project ?? null}
                   onSubmit={handleProjectSubmit}
                   onCancel={() => setEditor(null)}
@@ -285,7 +312,9 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => {
                           if (confirm(`Delete "${project.title}"?`)) {
-                            deleteProject(project.id);
+                            if (!deleteProject(project.id)) {
+                              setSaveError("Browser storage is full or unavailable.");
+                            }
                           }
                         }}
                         aria-label={`Delete ${project.title}`}
@@ -310,6 +339,7 @@ export default function AdminPage() {
               onClose: () => setEditor(null),
               children: (
                 <ExperienceForm
+                  key={editor.experience?.id ?? "new-experience"}
                   initial={editor.experience ?? null}
                   onSubmit={handleExperienceSubmit}
                   onCancel={() => setEditor(null)}
@@ -362,7 +392,9 @@ export default function AdminPage() {
                       type="button"
                       onClick={() => {
                         if (confirm(`Delete "${experience.title}"?`)) {
-                          deleteExperience(experience.id);
+                          if (!deleteExperience(experience.id)) {
+                            setSaveError("Browser storage is full or unavailable.");
+                          }
                         }
                       }}
                       aria-label={`Delete ${experience.title}`}
@@ -387,13 +419,35 @@ export default function AdminPage() {
               onClose: () => setEditor(null),
               children: (
                 <SkillForm
+                  key={editor.index ?? "new-skill"}
                   initial={
                     editor.index !== undefined
                       ? skillGroups[editor.index]
                       : undefined
                   }
                   onSubmit={(group) => {
-                    upsertSkillGroup(group);
+                    const duplicateCategory = skillGroups.some(
+                      (existingGroup, index) =>
+                        existingGroup.category === group.category &&
+                        index !== editor.index,
+                    );
+                    if (duplicateCategory) {
+                      setSaveError(
+                        "A skill group with this category already exists.",
+                      );
+                      return;
+                    }
+                    const saved = upsertSkillGroup(
+                      group,
+                      editor.index !== undefined
+                        ? skillGroups[editor.index].category
+                        : undefined,
+                    );
+                    if (!saved) {
+                      setSaveError("Browser storage is full or unavailable.");
+                      return;
+                    }
+                    setSaveError("");
                     setEditor(null);
                   }}
                   onCancel={() => setEditor(null)}
@@ -437,7 +491,9 @@ export default function AdminPage() {
                         type="button"
                         onClick={() => {
                           if (confirm(`Delete "${group.category}"?`)) {
-                            deleteSkillGroup(group.category);
+                            if (!deleteSkillGroup(group.category)) {
+                              setSaveError("Browser storage is full or unavailable.");
+                            }
                           }
                         }}
                         aria-label={`Delete ${group.category}`}

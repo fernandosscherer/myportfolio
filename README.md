@@ -18,14 +18,13 @@ Framer Motion. MIT licensed — fork it, add your content, and ship.
 - **SEO** — metadata, Open Graph, sitemap, robots, RSS-ready
 - **CMS-ready** — Supabase schema included (`supabase/schema.sql`)
 - **Experience / Skills / Resume / About / Contact** pages
-- **Admin** — login-gated dashboard scaffold (PT-BR)
+- **Admin** — browser-local content editor for previewing portfolio changes
 
 ## Quick start
 
 ```bash
 npm install
-cp .env.example .env.local   # add your Supabase keys (optional
-npm run dev                  # for the CMS admin)
+npm run dev
 ```
 
 Open http://localhost:3000.
@@ -34,17 +33,24 @@ Open http://localhost:3000.
 
 | What              | Where                                    |
 | ----------------- | ---------------------------------------- |
-| Name, links, bio  | `src/lib/config.ts`                      |
-| Projects          | `src/lib/projects.ts` (see field docs)   |
-| Experience        | `src/lib/projects.ts` (`experiences`)    |
-| Skills            | `src/lib/projects.ts` (`skillGroups`)    |
+| Name, links, bio  | `/admin` Profile tab or `src/lib/config.ts` |
+| Projects          | `/admin` Projects tab                    |
+| Experience        | `/admin` Experiences tab                 |
+| Skills            | `/admin` Skills tab                      |
 | Resume PDF        | `public/resume.pdf`                      |
 | OG image (1200×630) | `public/og-image.png`                  |
 
 ## Database
 
 Run `supabase/schema.sql` in the Supabase SQL Editor to create
-`projects`, `tags`, `project_tags`, `project_images` and `links` with RLS.
+the optional `projects` table with read-only RLS. Links, tags and images use
+the JSON fields already present on each project instead of duplicate tables.
+The application currently stores admin edits only in the current browser's
+localStorage. The schema intentionally provides no write policy; add
+owner-scoped authorization before connecting a shared CMS.
+Older installations may still contain the former relation tables. The schema
+revokes their permissive write policies but intentionally does not drop data;
+remove those tables manually after confirming they are unused.
 
 ## Commands
 

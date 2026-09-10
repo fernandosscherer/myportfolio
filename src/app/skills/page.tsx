@@ -1,6 +1,6 @@
 "use client";
 
-import { useContent } from "@/lib/content-store";
+import { PAGE_DEFAULTS, useContent } from "@/lib/content-store";
 import Link from "next/link";
 import { Code2, Server, Cpu, Cloud, Workflow, Pencil } from "lucide-react";
 
@@ -15,10 +15,8 @@ const iconMap: Record<string, React.ReactNode> = {
 export default function SkillsPage() {
   const { skillGroups, pages } = useContent();
   const copy = pages["/skills"] ?? {};
-  const pageTitle = copy.title ?? "Skills";
-  const pageDescription =
-    copy.description ??
-    "The technologies and tools I use to build production-ready products.";
+  const pageTitle = copy.title ?? PAGE_DEFAULTS["/skills"].title;
+  const pageDescription = copy.description ?? PAGE_DEFAULTS["/skills"].description;
 
   return (
     <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16">

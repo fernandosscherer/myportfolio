@@ -22,13 +22,4 @@ export const siteConfig = {
     { value: "50+", label: "Projects Delivered" },
     { value: "AI", label: "AI & Automation" },
   ],
-  nav: [
-    { label: "Projects", href: "/projects" },
-    { label: "Experience", href: "/experience" },
-    { label: "Skills", href: "/skills" },
-    { label: "Resume", href: "/resume" },
-    { label: "About", href: "/about" },
-    { label: "Contact", href: "/contact" },
-    { label: "Admin", href: "/admin" },
-  ],
 } as const;

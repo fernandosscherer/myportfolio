@@ -1,16 +1,14 @@
 "use client";
 
 import { Mail, MessageSquare, CalendarClock, Phone } from "lucide-react";
-import { useContent } from "@/lib/content-store";
+import { PAGE_DEFAULTS, useContent } from "@/lib/content-store";
 import LinkTypeIcon from "@/components/LinkTypeIcon";
 
 export default function ContactPage() {
   const { pages, profile } = useContent();
   const copy = pages["/contact"] ?? {};
-  const pageTitle = copy.title ?? "Let's talk";
-  const pageDescription =
-    copy.description ??
-    "I'm open to freelance projects, full-time roles and collaborations in AI, Web and Automation.";
+  const pageTitle = copy.title ?? PAGE_DEFAULTS["/contact"].title;
+  const pageDescription = copy.description ?? PAGE_DEFAULTS["/contact"].description;
 
   const groupedSocials = profile.socials;
 

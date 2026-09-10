@@ -2,14 +2,13 @@
 
 import { Download } from "lucide-react";
 import Link from "next/link";
-import { useContent } from "@/lib/content-store";
+import { PAGE_DEFAULTS, useContent } from "@/lib/content-store";
 
 export default function ResumePage() {
   const { experiences, skillGroups, pages, profile } = useContent();
   const copy = pages["/resume"] ?? {};
-  const pageTitle = copy.title ?? "Resume";
-  const pageDescription =
-    copy.description ?? "A concise overview of my professional journey.";
+  const pageTitle = copy.title ?? PAGE_DEFAULTS["/resume"].title;
+  const pageDescription = copy.description ?? PAGE_DEFAULTS["/resume"].description;
   const summary = copy.bio ?? profile.headline;
   return (
     <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16">

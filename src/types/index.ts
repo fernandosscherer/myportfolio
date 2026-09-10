@@ -1,28 +1,46 @@
-export type ProjectCategory =
-  | "AI"
-  | "Automation"
-  | "WordPress"
-  | "SaaS"
-  | "Dashboard"
-  | "API"
-  | "Cloud"
-  | "Design System";
+export const PROJECT_CATEGORIES = [
+  "AI",
+  "Automation",
+  "WordPress",
+  "SaaS",
+  "Dashboard",
+  "API",
+  "Cloud",
+  "Design System",
+] as const;
 
-export type ProjectStatus = "Featured" | "Completed" | "In Progress" | "Archived";
+export type ProjectCategory = (typeof PROJECT_CATEGORIES)[number];
 
-export type ProjectLinkType =
-  | "github"
-  | "website"
-  | "demo"
-  | "youtube"
-  | "vimeo"
-  | "figma"
-  | "behance"
-  | "instagram"
-  | "facebook"
-  | "linkedin"
-  | "x"
-  | "outros";
+export const PROJECT_STATUSES = ["Completed", "In Progress", "Archived"] as const;
+
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+
+export const PROJECT_LINK_TYPES = [
+  "github",
+  "website",
+  "demo",
+  "youtube",
+  "vimeo",
+  "figma",
+  "behance",
+  "instagram",
+  "facebook",
+  "linkedin",
+  "x",
+  "outros",
+] as const;
+
+export type ProjectLinkType = (typeof PROJECT_LINK_TYPES)[number];
+
+export const PROFILE_LINK_TYPES = [
+  "github",
+  "website",
+  "linkedin",
+  "instagram",
+  "facebook",
+  "x",
+  "outros",
+] as const satisfies readonly ProjectLinkType[];
 
 export interface ProjectLink {
   type: ProjectLinkType;
@@ -59,7 +77,6 @@ export interface Project {
   links: ProjectLink[];
   results?: ProjectResult;
   images?: ProjectImage[];
-  architecture?: string;
   features?: string[];
   challenges?: string;
   solution?: string;
@@ -111,24 +128,6 @@ export interface ProfileData {
   socials: ProfileLink[];
   indicators: Indicator[];
 }
-
-export interface Tag {
-  id: string;
-  name: string;
-  color: string;
-  category: string;
-}
-
-export const CATEGORY_COLORS: Record<ProjectCategory, string> = {
-  AI: "bg-cat-ai",
-  Automation: "bg-cat-automation",
-  WordPress: "bg-cat-wordpress",
-  SaaS: "bg-cat-saas",
-  Dashboard: "bg-cat-dashboard",
-  API: "bg-cat-api",
-  Cloud: "bg-cat-cloud",
-  "Design System": "bg-cat-design",
-};
 
 export const CATEGORY_TEXT_COLORS: Record<ProjectCategory, string> = {
   AI: "text-cat-ai",

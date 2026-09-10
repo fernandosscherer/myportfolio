@@ -55,6 +55,7 @@ export default function ProjectCard({ project, index = 0 }: ProjectCardProps) {
               src={coverImage.url}
               alt={coverImage.caption ?? project.title}
               fill
+              unoptimized
               sizes="(max-width: 768px) 100vw, 400px"
               className="object-cover transition-transform duration-200 hover:scale-105"
             />

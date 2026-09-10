@@ -13,7 +13,7 @@ import {
   FolderPlus,
 } from "lucide-react";
 import ProjectCard from "@/components/ProjectCard";
-import { useContent } from "@/lib/content-store";
+import { PAGE_DEFAULTS, useContent } from "@/lib/content-store";
 import LinkTypeIcon from "@/components/LinkTypeIcon";
 
 const indicatorIcons = [Briefcase, FolderGit2, Sparkles] as const;
@@ -22,10 +22,8 @@ export default function Home() {
   const { projects, pages, profile } = useContent();
   const homeCopy = pages["/"] ?? {};
   const headline = homeCopy.headline ?? profile.headline;
-  const ctaTitle = homeCopy.title ?? "Let's build something together";
-  const ctaText =
-    homeCopy.description ??
-    "I help startups and companies build high-quality websites, SaaS products, AI integrations and automation systems.";
+  const ctaTitle = homeCopy.title ?? PAGE_DEFAULTS["/"].title;
+  const ctaText = homeCopy.description ?? PAGE_DEFAULTS["/"].description;
   const featuredProjects = projects.filter((p) => p.featured).slice(0, 4);
   const roleParts = profile.role
     .split("•")

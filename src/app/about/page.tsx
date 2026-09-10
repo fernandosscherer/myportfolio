@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Mail, MapPin, Phone } from "lucide-react";
-import { useContent } from "@/lib/content-store";
+import { PAGE_DEFAULTS, useContent } from "@/lib/content-store";
 import LinkTypeIcon from "@/components/LinkTypeIcon";
 
 export default function AboutPage() {
@@ -11,9 +11,7 @@ export default function AboutPage() {
   const copy = pages["/about"] ?? {};
   const pageTitle = copy.title ?? profile.name;
   const bioOne = copy.description ?? profile.headline;
-  const bioTwo =
-    copy.bio ??
-    "With a focus on shipping, I lead projects end-to-end: architecture, interface, infrastructure and deployment.";
+  const bioTwo = copy.bio ?? PAGE_DEFAULTS["/about"].bio;
   return (
     <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16">
       <p className="font-mono text-sm text-primary mb-2">About</p>

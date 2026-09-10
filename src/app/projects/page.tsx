@@ -3,32 +3,24 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { Search, ArrowUpDown, ArrowRight, FolderGit2 } from "lucide-react"
-import { useContent } from "@/lib/content-store"
+import { PAGE_DEFAULTS, useContent } from "@/lib/content-store"
+import { PROJECT_CATEGORIES, PROJECT_STATUSES } from "@/types"
 import type { ProjectCategory } from "@/types"
 
-const categories: (ProjectCategory | "All")[] = [
-  "All",
-  "AI",
-  "Automation",
-  "WordPress",
-  "SaaS",
-  "Dashboard",
-  "API",
-  "Cloud",
-  "Design System",
-]
+const categories: (ProjectCategory | "All")[] = ["All", ...PROJECT_CATEGORIES]
 
-const statuses = ["All", "Featured", "Completed", "In Progress", "Archived"] as const
+const statuses = ["All", "Featured", ...PROJECT_STATUSES] as const
+type StatusFilter = (typeof statuses)[number]
 
 export default function ProjectsPage() {
   const { projects, pages } = useContent()
   const copy = pages["/projects"] ?? {}
-  const pageTitle = copy.title ?? "Projects"
-  const pageDescription = copy.description ?? "All case studies and experiments"
+  const pageTitle = copy.title ?? PAGE_DEFAULTS["/projects"].title
+  const pageDescription = copy.description ?? PAGE_DEFAULTS["/projects"].description
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState<ProjectCategory | "All">("All")
   const [year, setYear] = useState<string>("All")
-  const [status, setStatus] = useState<string>("All")
+  const [status, setStatus] = useState<StatusFilter>("All")
 
   const years = useMemo(() => {
     const set = new Set<string>()
@@ -57,7 +49,8 @@ export default function ProjectsPage() {
 
       if (category !== "All" && !p.category.includes(category)) return false
       if (year !== "All" && String(p.year) !== year) return false
-      if (status !== "All" && p.status !== status) return false
+      if (status === "Featured" && !p.featured) return false
+      if (status !== "All" && status !== "Featured" && p.status !== status) return false
 
       return true
     })
@@ -115,7 +108,7 @@ export default function ProjectsPage() {
 
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => setStatus(e.target.value as StatusFilter)}
           className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
         >
           {statuses.map((s) => (

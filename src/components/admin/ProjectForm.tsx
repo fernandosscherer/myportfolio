@@ -4,6 +4,10 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { Plus, Trash2, Upload, ImageIcon } from "lucide-react";
 import { resizeImage } from "@/lib/image-utils";
+import {
+  getSafeExternalUrl,
+  isSafeImageSource,
+} from "@/lib/content-validation";
 import type {
   Project,
   ProjectCategory,
@@ -11,40 +15,12 @@ import type {
   ProjectLinkType,
   ProjectStatus,
 } from "@/types";
+import {
+  PROJECT_CATEGORIES,
+  PROJECT_LINK_TYPES,
+  PROJECT_STATUSES,
+} from "@/types";
 import type { ProjectDraft } from "@/lib/content-store";
-
-const CATEGORIES: ProjectCategory[] = [
-  "AI",
-  "Automation",
-  "WordPress",
-  "SaaS",
-  "Dashboard",
-  "API",
-  "Cloud",
-  "Design System",
-];
-
-const STATUSES: ProjectStatus[] = [
-  "Featured",
-  "Completed",
-  "In Progress",
-  "Archived",
-];
-
-const LINK_TYPES: ProjectLinkType[] = [
-  "github",
-  "website",
-  "demo",
-  "youtube",
-  "vimeo",
-  "figma",
-  "behance",
-  "instagram",
-  "facebook",
-  "linkedin",
-  "x",
-  "outros",
-];
 
 const inputClass =
   "rounded-md border border-border bg-surface px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-primary/30";
@@ -126,6 +102,7 @@ export default function ProjectForm({
     initial ? projectToDraft(initial) : emptyDraft(),
   );
   const [uploading, setUploading] = useState(false);
+  const [formError, setFormError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,7 +164,17 @@ export default function ProjectForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(draft);
+    const links = draft.links.filter((link) => link.url.trim());
+    if (links.some((link) => !getSafeExternalUrl(link.url))) {
+      setFormError("Links must use http:// or https://.");
+      return;
+    }
+    if (coverUrl && !isSafeImageSource(coverUrl)) {
+      setFormError("The card image must be an http(s) URL or an uploaded image.");
+      return;
+    }
+    setFormError("");
+    onSubmit({ ...draft, links });
   };
 
   return (
@@ -246,7 +233,7 @@ export default function ProjectForm({
             onChange={(e) => set("status", e.target.value as ProjectStatus)}
             className={inputClass}
           >
-            {STATUSES.map((status) => (
+            {PROJECT_STATUSES.map((status) => (
               <option key={status} value={status}>
                 {status}
               </option>
@@ -264,7 +251,7 @@ export default function ProjectForm({
         <Field label="Card photo">
           <div className="flex items-start gap-3">
             <div className="relative grid h-20 w-32 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-surface-hover">
-              {coverUrl ? (
+            {isSafeImageSource(coverUrl) ? (
                 <Image
                   src={coverUrl}
                   alt="Cover preview"
@@ -349,7 +336,7 @@ export default function ProjectForm({
 
       <Field label="Categories">
         <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((category) => (
+          {PROJECT_CATEGORIES.map((category) => (
             <button
               key={category}
               type="button"
@@ -388,7 +375,7 @@ export default function ProjectForm({
                 }
                 className={`${inputClass} w-32`}
               >
-                {LINK_TYPES.map((type) => (
+                {PROJECT_LINK_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {type}
                   </option>
@@ -480,6 +467,11 @@ export default function ProjectForm({
         </Field>
       </div>
 
+      {formError && (
+        <p role="alert" className="text-sm text-destructive">
+          {formError}
+        </p>
+      )}
       <div className="flex items-center justify-end gap-2 pt-2">
         <button
           type="button"
