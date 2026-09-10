@@ -4,8 +4,8 @@ import {
   createContext,
   useCallback,
   useContext,
-  useState,
   useEffect,
+  useSyncExternalStore,
 } from "react";
 import type { ReactNode } from "react";
 import {
@@ -121,6 +121,37 @@ function slugify(title: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+let state: PersistedContent = cloneSeed();
+const serverSnapshot: PersistedContent = cloneSeed();
+let hydrated = false;
+const listeners = new Set<() => void>();
+
+function getSnapshot(): PersistedContent {
+  return state;
+}
+
+function getServerSnapshot(): PersistedContent {
+  return serverSnapshot;
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function applyState(next: PersistedContent) {
+  state = next;
+  listeners.forEach((listener) => listener());
+}
+
+function hydrate() {
+  if (hydrated) return;
+  hydrated = true;
+  applyState(loadPersisted());
+}
+
 interface ContentContextValue extends PersistedContent {
   addProject: (draft: ProjectDraft) => void;
   updateProject: (id: string, patch: Partial<Project>) => void;
@@ -138,13 +169,21 @@ interface ContentContextValue extends PersistedContent {
 const ContentContext = createContext<ContentContextValue | null>(null);
 
 export function ContentProvider({ children }: { children: ReactNode }) {
-  const [content, setContent] = useState<PersistedContent>(loadPersisted);
+  const content = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
+
+  useEffect(() => {
+    hydrate();
+  }, []);
 
   useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(content));
     } catch {
-      // storage unavailable — keep session state
+      // storage unavailable or full — keep session state
     }
   }, [content]);
 
@@ -158,109 +197,100 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       created_at: now,
       updated_at: now,
     };
-    setContent((prev) => ({ ...prev, projects: [...prev.projects, project] }));
+    applyState({ ...state, projects: [...state.projects, project] });
   }, []);
 
   const updateProject = useCallback((id: string, patch: Partial<Project>) => {
-    setContent((prev) => {
-      const slug = patch.slug?.trim() || undefined;
-      return {
-        ...prev,
-        projects: prev.projects.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                ...patch,
-                slug: slug ?? p.slug,
-                updated_at: new Date().toISOString(),
-              }
-            : p,
-        ),
-      };
+    const slug = patch.slug?.trim() || undefined;
+    applyState({
+      ...state,
+      projects: state.projects.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              ...patch,
+              slug: slug ?? p.slug,
+              updated_at: new Date().toISOString(),
+            }
+          : p,
+      ),
     });
   }, []);
 
   const deleteProject = useCallback((id: string) => {
-    setContent((prev) => ({
-      ...prev,
-      projects: prev.projects.filter((p) => p.id !== id),
-    }));
+    applyState({
+      ...state,
+      projects: state.projects.filter((p) => p.id !== id),
+    });
   }, []);
 
   const addExperience = useCallback((data: Omit<Experience, "id">) => {
     const experience: Experience = { ...data, id: crypto.randomUUID() };
-    setContent((prev) => ({
-      ...prev,
-      experiences: [...prev.experiences, experience],
-    }));
+    applyState({ ...state, experiences: [...state.experiences, experience] });
   }, []);
 
   const updateExperience = useCallback(
     (id: string, patch: Partial<Experience>) => {
-      setContent((prev) => ({
-        ...prev,
-        experiences: prev.experiences.map((e) =>
+      applyState({
+        ...state,
+        experiences: state.experiences.map((e) =>
           e.id === id ? { ...e, ...patch } : e,
         ),
-      }));
+      });
     },
     [],
   );
 
   const deleteExperience = useCallback((id: string) => {
-    setContent((prev) => ({
-      ...prev,
-      experiences: prev.experiences.filter((e) => e.id !== id),
-    }));
+    applyState({
+      ...state,
+      experiences: state.experiences.filter((e) => e.id !== id),
+    });
   }, []);
 
   const upsertSkillGroup = useCallback((skillGroup: SkillGroup) => {
-    setContent((prev) => {
-      const exists = prev.skillGroups.some(
-        (g) => g.category === skillGroup.category,
-      );
-      return {
-        ...prev,
-        skillGroups: exists
-          ? prev.skillGroups.map((g) =>
-              g.category === skillGroup.category ? skillGroup : g,
-            )
-          : [...prev.skillGroups, skillGroup],
-      };
+    const exists = state.skillGroups.some(
+      (g) => g.category === skillGroup.category,
+    );
+    applyState({
+      ...state,
+      skillGroups: exists
+        ? state.skillGroups.map((g) =>
+            g.category === skillGroup.category ? skillGroup : g,
+          )
+        : [...state.skillGroups, skillGroup],
     });
   }, []);
 
   const deleteSkillGroup = useCallback((category: string) => {
-    setContent((prev) => ({
-      ...prev,
-      skillGroups: prev.skillGroups.filter((g) => g.category !== category),
-    }));
+    applyState({
+      ...state,
+      skillGroups: state.skillGroups.filter((g) => g.category !== category),
+    });
   }, []);
 
   const updatePageCopy = useCallback((route: string, patch: PageCopy) => {
-    setContent((prev) => {
-      const current = prev.pages[route] ?? {};
-      const filtered: PageCopy = {};
-      for (const [key, value] of Object.entries({ ...current, ...patch })) {
-        if (value !== undefined && value !== "") filtered[key as keyof PageCopy] = value as never;
+    const current = state.pages[route] ?? {};
+    const filtered: PageCopy = {};
+    for (const [key, value] of Object.entries({ ...current, ...patch })) {
+      if (value !== undefined && value !== "") {
+        filtered[key as keyof PageCopy] = value as never;
       }
-      return {
-        ...prev,
-        pages: { ...prev.pages, [route]: filtered },
-      };
+    }
+    applyState({
+      ...state,
+      pages: { ...state.pages, [route]: filtered },
     });
   }, []);
 
   const resetPageCopy = useCallback((route: string) => {
-    setContent((prev) => {
-      const pages = { ...prev.pages };
-      delete pages[route];
-      return { ...prev, pages };
-    });
+    const pages = { ...state.pages };
+    delete pages[route];
+    applyState({ ...state, pages });
   }, []);
 
   const resetContent = useCallback(() => {
-    setContent(cloneSeed());
+    applyState(cloneSeed());
   }, []);
 
   const value: ContentContextValue = {
