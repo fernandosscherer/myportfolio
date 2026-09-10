@@ -1,6 +1,7 @@
 "use client";
 
 import { useContent } from "@/lib/content-store";
+import Link from "next/link";
 import { BriefcaseBusiness } from "lucide-react";
 
 export default function ExperiencePage() {
@@ -48,9 +49,9 @@ export default function ExperiencePage() {
           <p className="font-medium text-foreground">No experience added yet</p>
           <p className="text-sm text-muted">
             Fill the experiences in the{" "}
-            <a href="/admin" className="text-primary hover:underline">
+            <Link href="/admin" className="text-primary hover:underline">
               Content Dashboard
-            </a>
+            </Link>
             .
           </p>
         </div>

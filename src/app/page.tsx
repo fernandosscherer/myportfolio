@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -13,21 +14,23 @@ import {
 } from "lucide-react";
 import ProjectCard from "@/components/ProjectCard";
 import { useContent } from "@/lib/content-store";
-import { GithubIcon, LinkedinIcon } from "@/components/Icons";
-import { siteConfig } from "@/lib/config";
+import LinkTypeIcon from "@/components/LinkTypeIcon";
 
 const indicatorIcons = [Briefcase, FolderGit2, Sparkles] as const;
 
 export default function Home() {
-  const { projects, pages } = useContent();
+  const { projects, pages, profile } = useContent();
   const homeCopy = pages["/"] ?? {};
-  const headline = homeCopy.headline ?? siteConfig.headline;
+  const headline = homeCopy.headline ?? profile.headline;
   const ctaTitle = homeCopy.title ?? "Let's build something together";
   const ctaText =
     homeCopy.description ??
     "I help startups and companies build high-quality websites, SaaS products, AI integrations and automation systems.";
   const featuredProjects = projects.filter((p) => p.featured).slice(0, 4);
-  const roleParts = siteConfig.role.split("•").map((p) => p.trim());
+  const roleParts = profile.role
+    .split("•")
+    .map((p) => p.trim())
+    .filter(Boolean);
 
   return (
     <div className="mx-auto max-w-[1280px] px-4 md:px-6">
@@ -41,15 +44,27 @@ export default function Home() {
         >
           <div className="relative">
             <div className="h-[120px] w-[120px] rounded-full bg-gradient-to-br from-primary to-primary-hover p-[2px]">
-              <div className="flex h-full w-full items-center justify-center rounded-full bg-surface text-4xl font-bold text-primary">
-                {siteConfig.initials}
+              <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-surface">
+                {profile.photo ? (
+                  <Image
+                    src={profile.photo}
+                    alt={profile.name}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  <span className="text-4xl font-bold text-primary">
+                    {profile.initials}
+                  </span>
+                )}
               </div>
             </div>
             <span className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-success ring-4 ring-background animate-pulse-dot" />
           </div>
 
           <h1 className="mt-6 text-4xl md:text-5xl font-extrabold tracking-tight">
-            {siteConfig.name}
+            {profile.name}
           </h1>
 
           <p className="mt-4 text-base md:text-lg text-muted font-medium">
@@ -70,12 +85,12 @@ export default function Home() {
           <div className="mt-6 flex items-center gap-4 text-xs md:text-sm text-muted">
             <span className="inline-flex items-center gap-1.5">
               <MapPin className="h-4 w-4" />
-              {siteConfig.location}
+              {profile.location}
             </span>
             <span className="h-3 w-px bg-border" />
             <span className="inline-flex items-center gap-1.5 text-success">
               <span className="h-2 w-2 rounded-full bg-success animate-pulse-dot" />
-              {siteConfig.availability}
+              {profile.availability}
             </span>
           </div>
 
@@ -87,34 +102,28 @@ export default function Home() {
               View Projects
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <a
+            <Link
               href="/resume"
               className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface px-6 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
             >
               <Download className="h-4 w-4" />
               Download Resume
-            </a>
+            </Link>
           </div>
 
           <div className="mt-6 flex items-center gap-4">
-            <a
-              href={siteConfig.github}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              className="text-muted transition-colors hover:text-foreground"
-            >
-              <GithubIcon className="h-5 w-5" />
-            </a>
-            <a
-              href={siteConfig.linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn"
-              className="text-muted transition-colors hover:text-foreground"
-            >
-              <LinkedinIcon className="h-5 w-5" />
-            </a>
+            {profile.socials.slice(0, 6).map((social) => (
+              <a
+                key={social.type}
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={social.label ?? social.type}
+                className="text-muted transition-colors hover:text-foreground"
+              >
+                <LinkTypeIcon type={social.type} className="h-5 w-5" />
+              </a>
+            ))}
           </div>
         </motion.div>
 
@@ -125,7 +134,7 @@ export default function Home() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mt-12 grid w-full grid-cols-1 gap-4 sm:grid-cols-3"
         >
-          {siteConfig.indicators.map((indicator, i) => {
+          {profile.indicators.map((indicator, i) => {
             const Icon = indicatorIcons[i] ?? Briefcase;
             return (
               <div

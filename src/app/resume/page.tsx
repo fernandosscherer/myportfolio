@@ -1,16 +1,16 @@
 "use client";
 
 import { Download } from "lucide-react";
+import Link from "next/link";
 import { useContent } from "@/lib/content-store";
-import { siteConfig } from "@/lib/config";
 
 export default function ResumePage() {
-  const { experiences, skillGroups, pages } = useContent();
+  const { experiences, skillGroups, pages, profile } = useContent();
   const copy = pages["/resume"] ?? {};
   const pageTitle = copy.title ?? "Resume";
   const pageDescription =
     copy.description ?? "A concise overview of my professional journey.";
-  const summary = copy.bio ?? siteConfig.headline;
+  const summary = copy.bio ?? profile.headline;
   return (
     <div className="max-w-[760px] mx-auto px-4 md:px-6 py-16">
       <div className="flex justify-between items-start">
@@ -50,9 +50,9 @@ export default function ResumePage() {
         ) : (
           <p className="text-sm text-muted mt-3">
             Add entries in the{" "}
-            <a href="/admin" className="text-primary hover:underline">
+            <Link href="/admin" className="text-primary hover:underline">
               Content Dashboard
-            </a>
+            </Link>
             .
           </p>
         )}

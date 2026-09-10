@@ -13,7 +13,8 @@ import {
   experiences as seedExperiences,
   skillGroups as seedSkillGroups,
 } from "@/lib/projects";
-import type { Experience, Project, SkillGroup } from "@/types";
+import { siteConfig } from "@/lib/config";
+import type { Experience, ProfileData, Project, SkillGroup } from "@/types";
 
 export interface PageCopy {
   title?: string;
@@ -21,9 +22,36 @@ export interface PageCopy {
   headline?: string;
   bio?: string;
   cta?: string;
+  custom?: boolean;
+  slug?: string;
+  showInNav?: boolean;
 }
 
+const DEFAULT_PROFILE: ProfileData = {
+  name: siteConfig.name,
+  initials: siteConfig.initials,
+  role: siteConfig.role,
+  headline: siteConfig.headline,
+  location: siteConfig.location,
+  availability: siteConfig.availability,
+  email: siteConfig.email,
+  phone: "",
+  website: siteConfig.website,
+  photo: "",
+  calendly: siteConfig.calendly,
+  responseTime: "within 24 hours",
+  companyName: siteConfig.company.name,
+  companyDescription: siteConfig.company.description,
+  companyWebsite: siteConfig.company.website,
+  socials: [
+    { type: "github", url: siteConfig.github, label: "GitHub" },
+    { type: "linkedin", url: siteConfig.linkedin, label: "LinkedIn" },
+  ],
+  indicators: [...siteConfig.indicators],
+};
+
 export interface PersistedContent {
+  profile: ProfileData;
   projects: Project[];
   experiences: Experience[];
   skillGroups: SkillGroup[];
@@ -84,6 +112,7 @@ export const PAGE_DEFAULTS: Record<string, { title: string; description: string 
 function cloneSeed(): PersistedContent {
   const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
   return {
+    profile: copy(DEFAULT_PROFILE),
     projects: copy(seedProjects),
     experiences: copy(seedExperiences),
     skillGroups: copy(seedSkillGroups),
@@ -98,6 +127,8 @@ function loadPersisted(): PersistedContent {
     if (!raw) return cloneSeed();
     const parsed = JSON.parse(raw) as PersistedContent;
     if (
+      typeof parsed.profile !== "object" ||
+      parsed.profile === null ||
       !Array.isArray(parsed.projects) ||
       !Array.isArray(parsed.experiences) ||
       !Array.isArray(parsed.skillGroups) ||
@@ -153,6 +184,7 @@ function hydrate() {
 }
 
 interface ContentContextValue extends PersistedContent {
+  updateProfile: (patch: Partial<ProfileData>) => void;
   addProject: (draft: ProjectDraft) => void;
   updateProject: (id: string, patch: Partial<Project>) => void;
   deleteProject: (id: string) => void;
@@ -161,7 +193,9 @@ interface ContentContextValue extends PersistedContent {
   deleteExperience: (id: string) => void;
   upsertSkillGroup: (skillGroup: SkillGroup) => void;
   deleteSkillGroup: (category: string) => void;
+  addCustomPage: (label: string, slug: string) => void;
   updatePageCopy: (route: string, patch: PageCopy) => void;
+  deletePageCopy: (route: string) => void;
   resetPageCopy: (route: string) => void;
   resetContent: () => void;
 }
@@ -186,6 +220,27 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       // storage unavailable or full — keep session state
     }
   }, [content]);
+
+  const updateProfile = useCallback((patch: Partial<ProfileData>) => {
+    applyState({ ...state, profile: { ...state.profile, ...patch } });
+  }, []);
+
+  const addCustomPage = useCallback((label: string, slug: string) => {
+    const route = `/${slug}`;
+    applyState({
+      ...state,
+      pages: {
+        ...state.pages,
+        [route]: { title: label, custom: true, slug, showInNav: true },
+      },
+    });
+  }, []);
+
+  const deletePageCopy = useCallback((route: string) => {
+    const pages = { ...state.pages };
+    delete pages[route];
+    applyState({ ...state, pages });
+  }, []);
 
   const addProject = useCallback((draft: ProjectDraft) => {
     const now = new Date().toISOString();
@@ -295,6 +350,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
   const value: ContentContextValue = {
     ...content,
+    updateProfile,
     addProject,
     updateProject,
     deleteProject,
@@ -303,7 +359,9 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     deleteExperience,
     upsertSkillGroup,
     deleteSkillGroup,
+    addCustomPage,
     updatePageCopy,
+    deletePageCopy,
     resetPageCopy,
     resetContent,
   };

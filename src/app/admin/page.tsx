@@ -10,6 +10,7 @@ import {
   Plus,
   RotateCcw,
   Trash2,
+  User,
   X,
 } from "lucide-react";
 import { useContent } from "@/lib/content-store";
@@ -17,9 +18,10 @@ import type { ProjectDraft } from "@/lib/content-store";
 import type { Experience, Project, SkillGroup } from "@/types";
 import ProjectForm from "@/components/admin/ProjectForm";
 import ExperienceForm from "@/components/admin/ExperienceForm";
+import ProfileTab from "@/components/admin/ProfileTab";
 import PagesTab from "@/components/admin/PagesTab";
 
-type Tab = "projects" | "experiences" | "skills" | "pages";
+type Tab = "profile" | "projects" | "experiences" | "skills" | "pages";
 
 type EditorState =
   | { kind: "project"; project?: Project }
@@ -31,6 +33,7 @@ const inputClass =
   "rounded-md border border-border bg-surface px-3 py-2 text-sm w-full outline-none focus:ring-2 focus:ring-primary/30";
 
 const tabs: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "profile", label: "Profile", icon: User },
   { key: "projects", label: "Projects", icon: FolderGit2 },
   { key: "experiences", label: "Experiences", icon: Briefcase },
   { key: "skills", label: "Skills", icon: Code2 },
@@ -215,6 +218,8 @@ export default function AdminPage() {
           );
         })}
       </nav>
+
+      {activeTab === "profile" && <ProfileTab />}
 
       {activeTab === "projects" && (
         <div>

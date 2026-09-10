@@ -81,6 +81,37 @@ export interface SkillGroup {
   skills: string[];
 }
 
+export interface Indicator {
+  value: string;
+  label: string;
+}
+
+export interface ProfileLink {
+  type: ProjectLinkType;
+  url: string;
+  label?: string;
+}
+
+export interface ProfileData {
+  name: string;
+  initials: string;
+  role: string;
+  headline: string;
+  location: string;
+  availability: string;
+  email: string;
+  phone?: string;
+  website: string;
+  photo?: string;
+  calendly?: string;
+  responseTime?: string;
+  companyName?: string;
+  companyDescription?: string;
+  companyWebsite?: string;
+  socials: ProfileLink[];
+  indicators: Indicator[];
+}
+
 export interface Tag {
   id: string;
   name: string;

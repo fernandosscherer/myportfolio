@@ -4,15 +4,32 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Mail, Menu, X } from "lucide-react";
-import { GithubIcon, LinkedinIcon } from "@/components/Icons";
+import { useContent } from "@/lib/content-store";
+import LinkTypeIcon from "@/components/LinkTypeIcon";
 import ThemeToggle from "@/components/ThemeToggle";
-import { siteConfig } from "@/lib/config";
-
-const navLinks = siteConfig.nav;
 
 export default function Header() {
   const pathname = usePathname();
+  const { profile, pages } = useContent();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const standardLinks = [
+    { label: "Projects", href: "/projects" },
+    { label: "Experience", href: "/experience" },
+    { label: "Skills", href: "/skills" },
+    { label: "Resume", href: "/resume" },
+    { label: "About", href: "/about" },
+    { label: "Contact", href: "/contact" },
+    { label: "Admin", href: "/admin" },
+  ];
+
+  const customNavLinks = Object.entries(pages)
+    .filter(([, v]) => v.custom && v.showInNav !== false)
+    .map(([route, v]) => ({ label: v.title ?? route, href: route }));
+
+  const navLinks = [...standardLinks, ...customNavLinks];
+  const githubSocial = profile.socials.find((s) => s.type === "github");
+  const linkedinSocial = profile.socials.find((s) => s.type === "linkedin");
 
   return (
     <header className="fixed top-0 w-full z-50 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -21,7 +38,7 @@ export default function Header() {
           href="/"
           className="font-mono font-bold text-primary border border-border rounded-md px-2 py-1 text-sm"
         >
-          {siteConfig.initials}
+          {profile.initials || "FS"}
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
@@ -42,31 +59,37 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <a
-            href={siteConfig.github}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted transition-colors hover:text-foreground"
-            aria-label="GitHub"
-          >
-            <GithubIcon className="h-4 w-4" />
-          </a>
-          <a
-            href={siteConfig.linkedin}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted transition-colors hover:text-foreground"
-            aria-label="LinkedIn"
-          >
-            <LinkedinIcon className="h-4 w-4" />
-          </a>
-          <a
-            href={`mailto:${siteConfig.email}`}
-            className="text-muted transition-colors hover:text-foreground"
-            aria-label="Email"
-          >
-            <Mail className="h-4 w-4" />
-          </a>
+          {githubSocial && (
+            <a
+              href={githubSocial.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub"
+              className="text-muted transition-colors hover:text-foreground"
+            >
+              <LinkTypeIcon type="github" className="h-4 w-4" />
+            </a>
+          )}
+          {linkedinSocial && (
+            <a
+              href={linkedinSocial.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn"
+              className="text-muted transition-colors hover:text-foreground"
+            >
+              <LinkTypeIcon type="linkedin" className="h-4 w-4" />
+            </a>
+          )}
+          {profile.email && (
+            <a
+              href={`mailto:${profile.email}`}
+              className="text-muted transition-colors hover:text-foreground"
+              aria-label="Email"
+            >
+              <Mail className="h-4 w-4" />
+            </a>
+          )}
           <ThemeToggle />
 
           <button
