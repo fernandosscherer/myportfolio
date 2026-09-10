@@ -81,6 +81,21 @@ export default function PagesTab() {
         />
       )}
 
+      {editingRoute && (
+        <div className="rounded-xl border border-border bg-surface p-6 mb-5">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-semibold">
+              Edit {pages[editingRoute]?.title ?? editingRoute}
+              <span className="font-mono text-xs text-muted ml-2">{editingRoute}</span>
+            </h2>
+            <button type="button" onClick={() => setEditingRoute(null)} aria-label="Close" className="p-1 text-muted hover:text-foreground transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <PageForm route={editingRoute} onDone={() => setEditingRoute(null)} />
+        </div>
+      )}
+
       <div className="space-y-3">
         {PAGE_ROUTES.map(({ route, label }) => {
           const edited = Object.keys(pages[route] ?? {}).length > 0;
@@ -151,21 +166,6 @@ export default function PagesTab() {
           </div>
         ))}
       </div>
-
-      {editingRoute && (
-        <div className="rounded-xl border border-border bg-surface p-6 mt-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold">
-              Edit {pages[editingRoute]?.title ?? editingRoute}
-              <span className="font-mono text-xs text-muted ml-2">{editingRoute}</span>
-            </h2>
-            <button type="button" onClick={() => setEditingRoute(null)} className="p-1 text-muted hover:text-foreground">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <PageForm route={editingRoute} onDone={() => setEditingRoute(null)} />
-        </div>
-      )}
     </div>
   );
 }
